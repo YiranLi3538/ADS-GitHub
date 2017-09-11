@@ -1,0 +1,424 @@
+---
+title: "Practice"
+author: "Yiran Li"
+date: "September 8, 2016"
+output: html_document
+---
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+rm(list=ls())
+
+#plot(c(0,1), c(0,3), ty="n", main="A Sample Distribution", ylab="Density f(x)", xlab="x")
+#curve (dbeta(x, 3, 6), add=TRUE)
+
+ozone.0 = read.table("ozone.txt", header = T)
+head(ozone.0)
+ozone = ozone.0[,c(1,2)]
+head(ozone)
+hist(ozone$Ozone, freq = F, right = F, xlab = "Ozone", main = "Concentration of Ozone", ylim = c(0,.065))
+# use line() to overlay a density plot
+lines(density(ozone$Ozone))
+plot(density(ozone$Ozone))
+plot(Ozone ~ Temperature, data = ozone)
+lines(lowess(x=ozone$Temperature, y=ozone$Ozone))
+# plot(began~time, type = "b")
+# R_squared (coeff of determination) same as Multiple R-squared in summary
+linear_model = lm(Ozone~Temperature, data = ozone)
+summary(linear_model)
+
+## T test ##
+alpha = .05
+n = length(ozone$Temperature)
+
+# t(1-alpha/2, n-2) 
+qt(1-alpha/2, df = n-2)
+
+# t statistic (t*) by hand
+b1 = linear_model$coefficients[2]
+summary(linear_model)
+b1 +c(-1,1)*0.01912* qt(.975,n-2) # CI for b1
+confint(linear_model, "Temperature", level=.95) # CI for b1
+
+MSE = sum((ozone$Ozone - fitted.values((linear_model)))^2 )/(n-2)
+SSX = sum( (ozone$Temperature - mean(ozone$Temperature))^2 ) 
+t_star = (b1 - 0) / sqrt( MSE / SSX )
+t_star = as.numeric(t_star) # same as looking at "t value" in summary(linear_model)
+qqnorm(resid(mul_reg_patients)) #Normal Probability Plot
+qqline(resid(mul_reg_patients))
+
+2 * (1 - pt(t_star, df = n-2))
+
+# Prediction Interval is for Point Prediction(a future observation yet to be observed)
+predict(linear_model, data.frame(Temperature = 45), interval = "prediction")
+
+# Confidence Interval is for Point Estimate of Expected Value(cannot be observed)
+predict(linear_model, data.frame(Temperature = 45), interval = "confidence")
+predict(mul_reg_patients, data.frame(cbind(Age = 35, Severity = 45, Anxiety = 2.2)), interval = "confidence") # for Multiple Regression
+## F test ##
+# F (1-alpha, 1, n-2)
+qf(1-alpha, 1, n-2)
+
+#
+Calc_Fn = function(x){
+  
+}
+
+apply(resampled_values, 1, Calc_Fn)
+
+## lakeary data
+
+# Lack of Fit / Goodness of Fit Test
+library(alr3)
+library(alr4)
+length(lakemary$Length)
+plot(Length~Age, data = lakemary)
+lines(lowess(Length~Age, data = lakemary))
+lm_lakemary = lm(Length~Age, data = lakemary)
+pureErrorAnova(lm_lakemary) #reject the linear model b/ Lack-of_fit P-value very small
+
+
+senic = read.table("SENIC.txt", header = T)
+lm1 = lm(senic$Stay ~ senic$Risk)
+lm2 = lm(senic$Stay ~ senic$AFS)
+lm3 = lm(senic$Stay ~ senic$Xray)
+summary(lm1); summary(lm2); summary(lm3)
+anova(lm1); anova(lm2); anova(lm3)
+## Identify the outliers and Refit after removing the outliers
+plot(resid(lm1)~fitted.values(lm1), ylim=c(-8,8), xlab="Fitted Values for Risk", ylab="Residuals")
+identify(y=resid(lm1),x=fitted.values(lm1), n=2)
+
+plot(year_cor~unique(debt$Year), xlab="Year", ylab="Correlation Coefficient")
+identify(y=year_cor, x=unique(debt$Year), labels=unique(debt$Year), n=2) # show the name of the outlier case
+
+# Predictor and Response Transformation
+library(alr3)
+head(ufcwc)
+D = ufcwc$Dbh
+H = ufcwc$Height
+plot(H~D)
+lines(lowess(x=D, y=H)) # Linear regression is not appropriate 
+# Need to transform the data in order to fit linear model
+
+## i. Transform the predictor variable
+invTranPlot(x=D, y=H) #Blue: lambda=1, reg Y on X; Green: lambda=0, reg Y on log(X); Red: lambda = -1, reg Y on x^(-1); Black: optimal lambda
+# Pick numbers like 0, +-1, as lambda_hat that is close to the optimal lambda --> lambda_hat = 0, reg Y on log(X)
+plot(H~log(D))
+lines(lowess(x=log(D), y=H), col="red")
+abline(lm(H~log(D)), lty=2, col="green") #the new lowess and linear reg line overlap --> lm fits very well
+
+## ii. Response variable transformation
+### a)
+invResPlot(lm(H~D)) # Pick lambda_hat=2 closest to Black
+invResPlot(lm(H~D), lambda=c(0,1,2))
+### b) Boxcox
+library(MASS)
+boxcox(lm(H~D)) # Need to zoom in to pick the max lambda
+boxcox(lm(H~D), lambda=seq(0,2,.01)) # pick 1.4 as lambda_hat
+
+## iii. Do transformation on both predictor and response var
+invTranPlot(x=D, y= H^2) #fix optimal lambda for y, tweek x
+invTranPlot(x= D^(.5), y=H^2)
+tran_H = H^2 
+tran_D = D^(.5) # lambda_hat for x is .5
+plot(tran_H ~ tran_D)
+lines(lowess(x=tran_D, y=tran_H), col= "red")
+abline(lm(tran_H ~ tran_D), col="blue")
+
+```
+
+# The standard error of the sample mean is an estimate of how far the sample mean is likely to be from the population mean, whereas the standard deviation of the sample is the degree to which individuals within the sample differ from the sample mean. If the population standard deviation is finite, the standard error of the mean of the sample will tend to zero with increasing sample size, because the estimate of the population mean will improve, while the standard deviation of the sample will tend to approximate the population standard deviation as the sample size increases.
+```
+```{r}
+#par(mfrow = c(1,2))
+# Graphing and legend
+plot(1:10, 1:10, col=1:10, pch=1:10)
+plot(log(diam$carat), log(diam$price), col = diam$cut) # Points are colored by levels of cut
+legend("bottomright", legend = levels(diam$cut), fill = 1:length(levels(diam$cut)), cex = .5)
+# legend("right", legend=c("began", "later"), fill = c("blue", "red"))
+```
+
+```{r}
+# scatterplot matrix
+plot.labels <- function(x,y)
+{
+ type.codes <- as.numeric(Prestige$type)
+ plot.ch <- c("b","p","w")[type.codes]
+ points(x, y, pch=plot.ch, col=type.codes)
+ lines(lowess(y ~ x) )
+}
+
+pairs(prestige ~ education + income + women, data=Prestige, panel=plot.labels)
+```
+Reduced model vs Full model
+```{r}
+ms = as.factor(ms) # fit model with separate intercepts for ms (ms is a categorical data)
+lm_red = lm(risk~stay+age+xray+ms)
+lm_full = lm(risk~stay+age+xray+ms + stay:ms +age:ms + xray:ms)
+
+anova(lm_red, lm_full)
+```
+
+Categorical Variable Analysis
+```{r}
+cake <- read.table("brand_preference.txt", header=T)
+# Need to set categorical variables to FACTORs
+Moisture <- as.factor(cake$Moisture)
+Sweetness <- as.factor(cake$Sweetness)
+Y <- cake$Y
+
+## Interaction Plot: Useful for experiments with 2 factors; interaction is how the effect of one predictor depends on the levels of the other predictor
+interaction.plot(Moisture, Sweetness, Y)
+# Moisture (1st predictor; on the X-axis) effect is found in the slopes
+# Sweetness effect is in the gaps
+# Interaction effect: Diff between two slopes
+# Interaction effect: Diff between four gaps
+# No interaction indicated by parallel lines 
+
+# Test No Moisture Effect
+m0 <- lm(Y~Moisture)
+summary(m0)
+anova(m0)
+
+#Test no interaction effect
+m1 <- lm(Y~Moisture+Sweetness) #Main Effect Model
+m2 <- lm(Y~Moisture+Sweetness + Moisture:Sweetness) #Two-way Interaction
+anova(m1, m2)  
+
+#A predictor at its level1 is the BASELINE
+
+#parameters in m1 in terms of treatment means
+summary(m1)$coef
+
+mean(Y[Moisture==1 & Sweetness==1]) #These two NOT the same
+summary(m1)$coef[1]
+
+# Recall: b0 = ybar - sum( b_j * xbar_j )
+mean(Y) - 1/4 * (8 + 19.25 + 25.75) - 1/2 * (8.75)
+summary(m1)$coef[1]
+
+#
+summary(m1)$coef[2]
+mean(Y[Moisture==2]) - mean(Y[Moisture==1]) #CORRECT
+mean(Y[Moisture==2 & Sweetness==1]) - mean(Y[Moisture==1 & Sweetness==1])#INCORRECT
+mean(Y[Moisture==2 & Sweetness==2]) - mean(Y[Moisture==1 & Sweetness==2])#INCORRECT
+
+summary(m1)$coef[3]
+mean(Y[Moisture==3]) - mean(Y[Moisture==1]) #CORRECT
+
+#parameters in m2 in terms of treatment means
+summary(m2)$coef
+
+mean(Y[Moisture==1 & Sweetness==1]) #treatment mean for all predictors at baseline
+summary(m2)$coef[1] #intercept of m2
+
+mean(Y[Moisture==3 & Sweetness==1])
+62.5 + 22.0
+
+mean(Y[Moisture==4 & Sweetness==1])
+62.5 + 28.5
+
+mean(Y[Moisture==4 & Sweetness==2])
+62.5 + 28.5 + 12 -5.5
+
+### Lecture Notes ####
+
+# Regression with one categorical, one continuous predictor
+
+library(alr3)
+help(turkey)
+turkey
+turkey <- turkey[-1,]
+turkey
+rownames(turkey) <- 1:12
+turkey
+turkey <- turkey[,1:3]
+turkey
+
+attach(turkey)
+
+plot(Gain ~ A, pch=S)
+legend("bottomright", inset=.05, pch=1:3, legend=paste("Source ", 1:3))
+ 
+m1 <- lm(Gain ~ A)
+summary(m1)
+m2 <- lm(Gain ~ A + S)
+summary(m2)
+# And this is WRONG!!!!
+S
+# Must change source variable to a factor!
+turkey$S <- factor(turkey$S)
+S
+turkey$S
+detach(turkey)
+attach(turkey)
+turkey$S
+S
+summary(m2)
+m2 <- lm(Gain ~ A + S)
+summary(m2)
+# Source 1 intercept is 669
+# Source 2 intercept is 669 - 12.65
+#mean(Gain[S==2]) ??
+# Source 3 intercept is 669 - 7.85
+mean(c(669, 669-12.65, 669-7.85))
+coef(m1)
+
+```
+
+Multicolinearity
+
+```{r}
+
+rm(list=ls())
+n <- 50;
+set.seed(5205)
+X1 <- rnorm(n, mean=50, sd=10)
+hist(X1)
+X2 <- 100 - X1 + rnorm(n, mean=0, sd=5)
+hist(X2)
+# This is a sample from a normal distribution!
+qqnorm(X2)
+Y <- 87.5 - X1/4 + X2/2 + rnorm(n, mean=0, sd=5)
+pairs(Y ~ X1 + X2) #Strong trends -> concern for multicolinearity
+
+m1 <- lm(Y ~ X1)
+summary(m1)
+m12 <- lm(Y ~ X1 + X2)
+summary(m12)
+anova(m1, m12)
+
+# E(MSE) = (sigma)^2 = (Residual standard error)^2
+MSE.1 <- (summary(m1)$sigma)^2 
+S11 <- sum((X1 - mean(X1))^2)
+
+r12 <- cor(X1,X2)
+
+## QQQQQQQQQ
+# Square Std.Error of X1 from SLR(Y~X1) = variance for b1 in the SLR(Y~X1)
+vcov(m1)[2,2];  MSE.1 / S11;  0.07887^2
+
+MSE.12 <- (summary(m12)$sigma)^2
+MSE.12; 5.045^2
+#same rule does NOT apply to MLR any more
+vcov(m12)[2,2]; MSE.12 / S11; (0.1795)^2
+
+#What VAR(b1) would have been if predictors are UNCORRELATED
+MSE.12 / S11
+
+# This is the variance of b1 in multiple regression
+MSE.12 / S11 * 1 / (1 - r12^2) 
+
+# That's variance of b1 in simple regression
+vcov(m1)[2,2]; MSE.1 / S11;
+vcov(m1)[2,2];  MSE.1 / S11;  0.07887^2 
+
+# Increase by a factor of about 6
+.03626 / .00622
+
+1 / (1 - r12^2)
+## QQQQQQQQQ
+
+## WWWWWWWWW
+S22 <- sum((X2 - mean(X2))^2 )
+#What VAR(b2) would have been if predictors are UNCORRELATED
+MSE.12 / S22
+
+# This is the variance of b2 in multiple regression
+MSE.12 / S22 * 1 / (1 - r12^2) 
+
+# That's variance of b2 in simple regression
+m2 <- lm(Y~X2)
+summary(m2)
+MSE.2 <- (summary(m2)$sigma)^2
+vcov(m2)[2,2];  MSE.2 / S22;  0.06735^2 
+
+# Increase by a factor of about 6
+(MSE.12 / S22 * 1 / (1 - r12^2) ) / (0.06735^2)
+
+1 / (1 - r12^2)
+## WWWWWWWWW
+
+# Question:  Why does the variance inflation not seem to impact predictions 
+#  that much?
+ 
+t(c(1,50)) %*% vcov(m1) %*% c(1,50)
+predict(m1,data.frame(X1=50,X2=50),se.fit=T)$se.fit^2
+ 
+t(c(1,50)) %*% vcov(m2) %*% c(1,50)
+predict(m2,data.frame(X1=50,X2=50),se.fit=T)$se.fit^2
+ 
+t(c(1,50,50)) %*% vcov(m12) %*% c(1,50,50)
+predict(m12,data.frame(X1=50,X2=50),se.fit=T)$se.fit^2
+```
+
+# 3. (a) Lack of Fit Tests
+
+Fail to reject Ho for quadratic term in individual predictors and for Tukey's test for additivity. There is no strong evidence for curvature in the residual plots so linear mean function is probably appropriate.  
+```{r}
+senic <- read.table("SENIC.txt", header = T)
+Stay <- senic$Stay
+Age <- senic$Age
+Xray <- senic$Xray
+Cen <- senic$Cen
+
+m1_senic <- lm(Stay ~ Age + Xray + Cen)
+
+# Lack of Fit Test for need for a quadratic term in each predictor individually
+summary(update(m1_senic, ~.+I(Age^2)))
+summary(update(m1_senic, ~.+I(Xray^2)))
+summary(update(m1_senic, ~.+I(Cen^2)))
+
+# Lack of Fit for need for a quadratic term in the fitted values (Tukey's test for Additivity)
+fitted_senic <- fitted(m1_senic)
+summary(update(m1_senic, ~.+I(fitted_senic^2)))
+residualPlots(m1_senic)
+```
+
+# 3. (b) Breusch_Pagan Test for Non-constant Variance
+Assume E[Y|X=x] = ${\beta_0}$ + ${\beta_1}$${X}_1$ +${\beta_2}$${X}_2$ + ${\beta_3}$${X}_3$ and Var(Y|X=x) = exp{${\gamma_0}$ + ${\gamma_1}$${X}_1$ + ${\gamma_2}$${X}_2$ + ${\gamma_3}$${X}_3$}
+
+Ho: ${\gamma_1}$ = ${\gamma_2}$ = ${\gamma_3}$ = 0
+
+Ha: At least one ${\gamma_j}$ ${\neq}$ 0
+
+P-value = 2.506893e-09. Reject Ho and conclude that there is concern about the constant variance assumption.
+```{r}
+ncvTest(m1_senic, ~ Age + Xray + Cen)
+
+# Calulate the statistic manually
+e <- resid(m1_senic)
+e_sq <- e^2
+m1_2 <- lm(e_sq ~ Age + Xray + Cen)
+SSR_Star1 <- sum(anova(m1_2)["Sum Sq"][1:3,])
+X_Sq_BP1 <- 1/2 * SSR_Star1 / (1/length(Stay) * sum(e_sq))^2
+1-pchisq(X_Sq_BP1, df = 3)
+```
+apply: apply function over each row or collumn of the matirx; lapply: fn on elements (scalar or list) of a vector or vectorized data set; sapply: fn on elements; tapply: split then apply fn; mapply: multiple arguments
+```{r}
+apply(cats[,c(2,3)], 2, mean)
+colSums(apply(states[,c(1:8)], 2, function(col_sub) return(col_sub>mean(col_sub))))
+
+debt_France$next_growth <- sapply(debt_France$Year, 
+    function(yr) 
+      return( ifelse(is.double(debt_France$growth[debt_France$Year==yr+1]), signif(debt_France$growth[debt_France$Year==yr+1],4), NA ) ) )
+
+new_m_indices <- unlist(mapply(function(element, ind) {return(element[ind])}, split(sprint_m$m_indices, sprint_m$CityDate), min_ind))
+```
+
+merge() Lab6
+```{r}
+m_df <- sprint_m_fastest[ind_m, c("Time", "CityDate")]
+colnames(m_df) <- c("MensTime", "CityDate")
+f_df <- sprint_f_fastest[ind_w, c("Time", "CityDate")]
+colnames(f_df) <- c("WomensTime", "CityDate")
+sprint1 <- merge(m_df, f_df, by.x = "CityDate")
+head(sprint1, 5)
+```
+
+Data Transformation
+```{r}
+scale(states[1:2,1:2], center=T,scale=T)
+# diff(vec, lag =)
+
+```
+
